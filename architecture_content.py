@@ -215,3 +215,4 @@ DiabPredict is organized into distinct decoupled modules:
 * **Root Cause:** Streamlit's `st.dataframe` uses HTML5 Canvas, which ignores CSS text direction.
 * **Solution:** Applying Pandas Styler properties (`style.set_properties(**{'text-align': 'right', 'direction': 'rtl'})`) for right-aligned cells and headers.
 """
+
