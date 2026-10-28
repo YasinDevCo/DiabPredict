@@ -1061,11 +1061,11 @@ with tab_patient:
         ]
         headers = ["Clinical Parameter", "Current Value", "Normal Reference", "Unit", "Clinical Status"]
 
-    # Generate precision HTML table with 100% RTL support and badges
+    # Generate precision HTML table with 100% RTL support and badges (no leading indentation to avoid code blocks)
     align_dir = "rtl" if is_rtl else "ltr"
     align_text = "right" if is_rtl else "left"
 
-    table_rows_html = ""
+    table_rows = []
     for param, val, ref, unit, status, badge_tier in reference_data:
         if badge_tier == "normal":
             badge_style = "background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.35);"
@@ -1074,38 +1074,36 @@ with tab_patient:
         else:
             badge_style = "background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.35);"
 
-        table_rows_html += f"""
-        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.07); transition: background 0.2s;">
-            <td style="padding: 14px 16px; font-weight: 600; color: #f8fafc; text-align: {align_text};">{param}</td>
-            <td style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{val}</td>
-            <td style="padding: 14px 16px; color: #94a3b8; text-align: {align_text};">{ref}</td>
-            <td style="padding: 14px 16px; color: #64748b; text-align: {align_text};">{unit}</td>
-            <td style="padding: 14px 16px; text-align: {align_text};">
-                <span style="display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; {badge_style}">
-                    {status}
-                </span>
-            </td>
-        </tr>
-        """
+        table_rows.append(
+            f'<tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.07);">'
+            f'<td style="padding: 14px 16px; font-weight: 600; color: #f8fafc; text-align: {align_text};">{param}</td>'
+            f'<td style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{val}</td>'
+            f'<td style="padding: 14px 16px; color: #94a3b8; text-align: {align_text};">{ref}</td>'
+            f'<td style="padding: 14px 16px; color: #64748b; text-align: {align_text};">{unit}</td>'
+            f'<td style="padding: 14px 16px; text-align: {align_text};">'
+            f'<span style="display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; {badge_style}">{status}</span>'
+            f'</td>'
+            f'</tr>'
+        )
 
-    custom_table_html = f"""
-    <div style="direction: {align_dir}; text-align: {align_text}; overflow-x: auto; margin-top: 1.2rem; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(15, 23, 42, 0.45); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.92rem; direction: {align_dir}; text-align: {align_text};">
-            <thead>
-                <tr style="background: rgba(14, 165, 233, 0.12); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-                    <th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[0]}</th>
-                    <th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[1]}</th>
-                    <th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[2]}</th>
-                    <th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[3]}</th>
-                    <th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[4]}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {table_rows_html}
-            </tbody>
-        </table>
-    </div>
-    """
+    rows_joined = "".join(table_rows)
+
+    custom_table_html = (
+        f'<div style="direction: {align_dir}; text-align: {align_text}; overflow-x: auto; margin-top: 1.2rem; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(15, 23, 42, 0.45); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">'
+        f'<table style="width: 100%; border-collapse: collapse; font-size: 0.92rem; direction: {align_dir}; text-align: {align_text};">'
+        f'<thead>'
+        f'<tr style="background: rgba(14, 165, 233, 0.12); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">'
+        f'<th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[0]}</th>'
+        f'<th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[1]}</th>'
+        f'<th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[2]}</th>'
+        f'<th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[3]}</th>'
+        f'<th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[4]}</th>'
+        f'</tr>'
+        f'</thead>'
+        f'<tbody>{rows_joined}</tbody>'
+        f'</table>'
+        f'</div>'
+    )
     st.markdown(custom_table_html, unsafe_allow_html=True)
 
 
@@ -1140,7 +1138,7 @@ with tab_analytics:
     with col_chart:
         # High fidelity RTL progress bars
         max_w = float(fi_df[t('weight_col', active_lang)].max()) if len(fi_df) > 0 else 1.0
-        bar_rows_html = ""
+        bar_rows = []
 
         for _, r in fi_df.iterrows():
             fname = r[t('feature_col', active_lang)]
@@ -1148,37 +1146,39 @@ with tab_analytics:
             pct_bar = (wval / max_w) * 100
 
             if is_rtl:
-                bar_rows_html += f"""
-                <div style="margin-bottom: 14px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px; direction: rtl;">
-                        <span style="font-weight: 600; color: #f1f5f9;">{fname}</span>
-                        <span style="color: #38bdf8; font-weight: 700; direction: ltr;">{wval:.2f}%</span>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.06); border-radius: 8px; height: 10px; width: 100%; overflow: hidden; direction: rtl;">
-                        <div style="background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%); height: 100%; width: {pct_bar}%; border-radius: 8px;"></div>
-                    </div>
-                </div>
-                """
+                bar_rows.append(
+                    f'<div style="margin-bottom: 14px;">'
+                    f'<div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px; direction: rtl;">'
+                    f'<span style="font-weight: 600; color: #f1f5f9;">{fname}</span>'
+                    f'<span style="color: #38bdf8; font-weight: 700; direction: ltr;">{wval:.2f}%</span>'
+                    f'</div>'
+                    f'<div style="background: rgba(255,255,255,0.06); border-radius: 8px; height: 10px; width: 100%; overflow: hidden; direction: rtl;">'
+                    f'<div style="background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%); height: 100%; width: {pct_bar}%; border-radius: 8px;"></div>'
+                    f'</div>'
+                    f'</div>'
+                )
             else:
-                bar_rows_html += f"""
-                <div style="margin-bottom: 14px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px; direction: ltr;">
-                        <span style="font-weight: 600; color: #f1f5f9;">{fname}</span>
-                        <span style="color: #38bdf8; font-weight: 700;">{wval:.2f}%</span>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.06); border-radius: 8px; height: 10px; width: 100%; overflow: hidden; direction: ltr;">
-                        <div style="background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%); height: 100%; width: {pct_bar}%; border-radius: 8px;"></div>
-                    </div>
-                </div>
-                """
+                bar_rows.append(
+                    f'<div style="margin-bottom: 14px;">'
+                    f'<div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px; direction: ltr;">'
+                    f'<span style="font-weight: 600; color: #f1f5f9;">{fname}</span>'
+                    f'<span style="color: #38bdf8; font-weight: 700;">{wval:.2f}%</span>'
+                    f'</div>'
+                    f'<div style="background: rgba(255,255,255,0.06); border-radius: 8px; height: 10px; width: 100%; overflow: hidden; direction: ltr;">'
+                    f'<div style="background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%); height: 100%; width: {pct_bar}%; border-radius: 8px;"></div>'
+                    f'</div>'
+                    f'</div>'
+                )
 
         card_title = "اهمیت نسبی بیومارکرها در مدل" if is_rtl else "Relative Biomarker Importance"
-        custom_chart_html = f"""
-        <div style="direction: {'rtl' if is_rtl else 'ltr'}; padding: 18px 20px; border-radius: 14px; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(255, 255, 255, 0.1);">
-            <div style="font-weight: 700; font-size: 1rem; color: #f8fafc; margin-bottom: 14px;">📊 {card_title}</div>
-            {bar_rows_html}
-        </div>
-        """
+        chart_dir = "rtl" if is_rtl else "ltr"
+        bars_content = "".join(bar_rows)
+        custom_chart_html = (
+            f'<div style="direction: {chart_dir}; padding: 18px 20px; border-radius: 14px; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(255, 255, 255, 0.1);">'
+            f'<div style="font-weight: 700; font-size: 1rem; color: #f8fafc; margin-bottom: 14px;">📊 {card_title}</div>'
+            f'{bars_content}'
+            f'</div>'
+        )
         st.markdown(custom_chart_html, unsafe_allow_html=True)
 
     with col_matrix:
@@ -1204,39 +1204,38 @@ with tab_analytics:
             lbl_fn = "False Negative (Type II Error)"
             total_lbl = "of test split"
 
-        custom_cm_html = f"""
-        <div style="direction: {'rtl' if is_rtl else 'ltr'}; padding: 18px 20px; border-radius: 14px; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(255, 255, 255, 0.1);">
-            <div style="font-weight: 700; font-size: 1rem; color: #f8fafc; margin-bottom: 4px;">{cm_title}</div>
-            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px;">{cm_sub}</div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 14px 10px; text-align: center;">
-                    <div style="font-size: 0.76rem; color: #10b981; font-weight: 600;">{lbl_tn}</div>
-                    <div style="font-size: 1.65rem; font-weight: 800; color: #ffffff; margin: 4px 0;">{tn}</div>
-                    <div style="font-size: 0.74rem; color: #94a3b8;">{(tn/total_cm*100):.1f}% {total_lbl}</div>
-                </div>
-                <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 10px; padding: 14px 10px; text-align: center;">
-                    <div style="font-size: 0.76rem; color: #f87171; font-weight: 600;">{lbl_fp}</div>
-                    <div style="font-size: 1.65rem; font-weight: 800; color: #ffffff; margin: 4px 0;">{fp}</div>
-                    <div style="font-size: 0.74rem; color: #94a3b8;">{(fp/total_cm*100):.1f}% {total_lbl}</div>
-                </div>
-                <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px; padding: 14px 10px; text-align: center;">
-                    <div style="font-size: 0.76rem; color: #fbbf24; font-weight: 600;">{lbl_fn}</div>
-                    <div style="font-size: 1.65rem; font-weight: 800; color: #ffffff; margin: 4px 0;">{fn}</div>
-                    <div style="font-size: 0.74rem; color: #94a3b8;">{(fn/total_cm*100):.1f}% {total_lbl}</div>
-                </div>
-                <div style="background: rgba(14, 165, 233, 0.12); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 10px; padding: 14px 10px; text-align: center;">
-                    <div style="font-size: 0.76rem; color: #38bdf8; font-weight: 600;">{lbl_tp}</div>
-                    <div style="font-size: 1.65rem; font-weight: 800; color: #ffffff; margin: 4px 0;">{tp}</div>
-                    <div style="font-size: 0.74rem; color: #94a3b8;">{(tp/total_cm*100):.1f}% {total_lbl}</div>
-                </div>
-            </div>
-
-            <div style="margin-top: 14px; font-size: 0.8rem; color: #94a3b8; text-align: center; direction: {'rtl' if is_rtl else 'ltr'};">
-                {t("cm_caption", active_lang, test_count=meta['test_samples'], acc=baseline_acc_pct)}
-            </div>
-        </div>
-        """
+        cm_caption_text = t("cm_caption", active_lang, test_count=meta['test_samples'], acc=baseline_acc_pct)
+        custom_cm_html = (
+            f'<div style="direction: {chart_dir}; padding: 18px 20px; border-radius: 14px; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(255, 255, 255, 0.1);">'
+            f'<div style="font-weight: 700; font-size: 1rem; color: #f8fafc; margin-bottom: 4px;">{cm_title}</div>'
+            f'<div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px;">{cm_sub}</div>'
+            f'<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">'
+            f'<div style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 14px 10px; text-align: center;">'
+            f'<div style="font-size: 0.76rem; color: #10b981; font-weight: 600;">{lbl_tn}</div>'
+            f'<div style="font-size: 1.65rem; font-weight: 800; color: #ffffff; margin: 4px 0;">{tn}</div>'
+            f'<div style="font-size: 0.74rem; color: #94a3b8;">{(tn/total_cm*100):.1f}% {total_lbl}</div>'
+            f'</div>'
+            f'<div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 10px; padding: 14px 10px; text-align: center;">'
+            f'<div style="font-size: 0.76rem; color: #f87171; font-weight: 600;">{lbl_fp}</div>'
+            f'<div style="font-size: 1.65rem; font-weight: 800; color: #ffffff; margin: 4px 0;">{fp}</div>'
+            f'<div style="font-size: 0.74rem; color: #94a3b8;">{(fp/total_cm*100):.1f}% {total_lbl}</div>'
+            f'</div>'
+            f'<div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px; padding: 14px 10px; text-align: center;">'
+            f'<div style="font-size: 0.76rem; color: #fbbf24; font-weight: 600;">{lbl_fn}</div>'
+            f'<div style="font-size: 1.65rem; font-weight: 800; color: #ffffff; margin: 4px 0;">{fn}</div>'
+            f'<div style="font-size: 0.74rem; color: #94a3b8;">{(fn/total_cm*100):.1f}% {total_lbl}</div>'
+            f'</div>'
+            f'<div style="background: rgba(14, 165, 233, 0.12); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 10px; padding: 14px 10px; text-align: center;">'
+            f'<div style="font-size: 0.76rem; color: #38bdf8; font-weight: 600;">{lbl_tp}</div>'
+            f'<div style="font-size: 1.65rem; font-weight: 800; color: #ffffff; margin: 4px 0;">{tp}</div>'
+            f'<div style="font-size: 0.74rem; color: #94a3b8;">{(tp/total_cm*100):.1f}% {total_lbl}</div>'
+            f'</div>'
+            f'</div>'
+            f'<div style="margin-top: 14px; font-size: 0.8rem; color: #94a3b8; text-align: center; direction: {chart_dir};">'
+            f'{cm_caption_text}'
+            f'</div>'
+            f'</div>'
+        )
         st.markdown(custom_cm_html, unsafe_allow_html=True)
 
 
@@ -1281,43 +1280,61 @@ with tab_data:
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown(f"**{'نمونه داده‌های ثبت‌شده در پایگاه پیما (۱۵ سطر اول):' if is_rtl else 'Raw Sample Records (First 15 Rows):'}**")
-    st.dataframe(data.head(15), use_container_width=True)
+    
+    # Styled dataframe with right-aligned text
+    if is_rtl:
+        styled_sample = data.head(15).style.set_properties(**{
+            'text-align': 'right',
+            'direction': 'rtl',
+            'font-family': 'Vazirmatn, Tahoma, sans-serif'
+        })
+        st.dataframe(styled_sample, use_container_width=True)
+    else:
+        st.dataframe(data.head(15), use_container_width=True)
 
     # Column explanations in Persian/English expander
     expander_label = "📖 راهنمای متغیرها و نام ستون‌های داده" if is_rtl else "📖 Dataset Columns Glossary"
     with st.expander(expander_label, expanded=False):
         if is_rtl:
-            glossary_html = """
-            <div style="direction: rtl; text-align: right; line-height: 1.8; font-size: 0.92rem; color: #cbd5e1;">
-                • <b>Pregnancies:</b> تعداد دفعات بارداری بیمار.<br>
-                • <b>Glucose:</b> غلظت گلوکز پلاسما در دقیقه ۱۲۰ آزمون تحمل گلوکز خوراکی (mg/dL).<br>
-                • <b>BloodPressure:</b> فشار خون دیاستولیک بر حسب میلی‌متر جیوه (mm Hg).<br>
-                • <b>SkinThickness:</b> ضخامت چین پوستی عضله سه‌سر بازو بر حسب میلی‌متر (mm).<br>
-                • <b>Insulin:</b> سطح سرمی انسولین ۲ ساعت پس از مصرف گلوکز (μU/mL).<br>
-                • <b>BMI:</b> شاخص توده بدنی (کیلوگرم بر توان دوم قد بر حسب متر).<br>
-                • <b>DiabetesPedigreeFunction:</b> تابع ریاضی محاسبه سابقه ژنتیکی و خویشاوندی دیابت.<br>
-                • <b>Age:</b> سن شناسنامه‌ای بیمار به سال.<br>
-                • <b>Outcome:</b> تشخیص بالینی نهایی (۰ = سالم / منفی، ۱ = مبتلا به دیابت / مثبت).
-            </div>
-            """
+            glossary_html = (
+                '<div style="direction: rtl; text-align: right; line-height: 1.9; font-size: 0.92rem; color: #cbd5e1;">'
+                '• <b>Pregnancies:</b> تعداد دفعات بارداری بیمار.<br>'
+                '• <b>Glucose:</b> غلظت گلوکز پلاسما در دقیقه ۱۲۰ آزمون تحمل گلوکز خوراکی (mg/dL).<br>'
+                '• <b>BloodPressure:</b> فشار خون دیاستولیک بر حسب میلی‌متر جیوه (mm Hg).<br>'
+                '• <b>SkinThickness:</b> ضخامت چین پوستی عضله سه‌سر بازو بر حسب میلی‌متر (mm).<br>'
+                '• <b>Insulin:</b> سطح سرمی انسولین ۲ ساعت پس از مصرف گلوکز (μU/mL).<br>'
+                '• <b>BMI:</b> شاخص توده بدنی (کیلوگرم بر توان دوم قد بر حسب متر).<br>'
+                '• <b>DiabetesPedigreeFunction:</b> تابع ریاضی محاسبه سابقه ژنتیکی و خویشاوندی دیابت.<br>'
+                '• <b>Age:</b> سن شناسنامه‌ای بیمار به سال.<br>'
+                '• <b>Outcome:</b> تشخیص بالینی نهایی (۰ = سالم / منفی، ۱ = مبتلا به دیابت / مثبت).'
+                '</div>'
+            )
         else:
-            glossary_html = """
-            <div style="direction: ltr; text-align: left; line-height: 1.8; font-size: 0.92rem; color: #cbd5e1;">
-                • <b>Pregnancies:</b> Number of times pregnant.<br>
-                • <b>Glucose:</b> Plasma glucose concentration at 2 hours in an oral glucose tolerance test (mg/dL).<br>
-                • <b>BloodPressure:</b> Diastolic blood pressure (mm Hg).<br>
-                • <b>SkinThickness:</b> Triceps skin fold thickness (mm).<br>
-                • <b>Insulin:</b> 2-Hour serum insulin level (μU/mL).<br>
-                • <b>BMI:</b> Body mass index (weight in kg / (height in m)^2).<br>
-                • <b>DiabetesPedigreeFunction:</b> Genetic scoring synthesizing family history of diabetes.<br>
-                • <b>Age:</b> Patient chronological age in years.<br>
-                • <b>Outcome:</b> Class variable (0 = Negative / Healthy, 1 = Positive / Diabetic).
-            </div>
-            """
+            glossary_html = (
+                '<div style="direction: ltr; text-align: left; line-height: 1.9; font-size: 0.92rem; color: #cbd5e1;">'
+                '• <b>Pregnancies:</b> Number of times pregnant.<br>'
+                '• <b>Glucose:</b> Plasma glucose concentration at 2 hours in an oral glucose tolerance test (mg/dL).<br>'
+                '• <b>BloodPressure:</b> Diastolic blood pressure (mm Hg).<br>'
+                '• <b>SkinThickness:</b> Triceps skin fold thickness (mm).<br>'
+                '• <b>Insulin:</b> 2-Hour serum insulin level (μU/mL).<br>'
+                '• <b>BMI:</b> Body mass index (weight in kg / (height in m)^2).<br>'
+                '• <b>DiabetesPedigreeFunction:</b> Genetic scoring synthesizing family history of diabetes.<br>'
+                '• <b>Age:</b> Patient chronological age in years.<br>'
+                '• <b>Outcome:</b> Class variable (0 = Negative / Healthy, 1 = Positive / Diabetic).'
+                '</div>'
+            )
         st.markdown(glossary_html, unsafe_allow_html=True)
 
     with st.expander(t("data_summary_expander", active_lang), expanded=False):
-        st.dataframe(data.describe().round(2), use_container_width=True)
+        if is_rtl:
+            styled_desc = data.describe().round(2).style.set_properties(**{
+                'text-align': 'right',
+                'direction': 'rtl',
+                'font-family': 'Vazirmatn, Tahoma, sans-serif'
+            })
+            st.dataframe(styled_desc, use_container_width=True)
+        else:
+            st.dataframe(data.describe().round(2), use_container_width=True)
 
 
 # -----------------------------------------------------------------------------
