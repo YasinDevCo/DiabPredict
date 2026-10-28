@@ -215,6 +215,10 @@ TEXTS = {
         "fa": "📖 راهنما و آموزش جامع",
         "en": "📖 User Guide & Tutorial",
     },
+    "tab_architecture": {
+        "fa": "🏗️ معماری سیستم و چرایی طراحی",
+        "en": "🏗️ System Architecture & Rationale",
+    },
 
     # ---------------- TAB 1: PREDICTION ----------------
     "welcome_info": {

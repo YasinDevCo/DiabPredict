@@ -18,6 +18,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix
 
 from translations import t
 from guide_content import GUIDE_FA, GUIDE_EN
+from architecture_content import ARCHITECTURE_FA, ARCHITECTURE_EN
 
 # -----------------------------------------------------------------------------
 # 0. STREAMLIT PAGE CONFIGURATION
@@ -904,9 +905,10 @@ tab_labels = [
     t("tab_analytics", active_lang),
     t("tab_data", active_lang),
     t("tab_guide", active_lang),
+    t("tab_architecture", active_lang),
 ]
 
-tab_prediction, tab_patient, tab_analytics, tab_data, tab_guide = st.tabs(tab_labels)
+tab_prediction, tab_patient, tab_analytics, tab_data, tab_guide, tab_arch = st.tabs(tab_labels)
 
 # -----------------------------------------------------------------------------
 # TAB 1: PREDICTION & RISK ASSESSMENT
@@ -1352,6 +1354,23 @@ with tab_guide:
         )
     else:
         st.markdown(GUIDE_EN, unsafe_allow_html=True)
+
+
+# -----------------------------------------------------------------------------
+# TAB 6: SYSTEM ARCHITECTURE & IMPLEMENTATION (معماری سیستم و چرایی طراحی)
+# -----------------------------------------------------------------------------
+with tab_arch:
+    if active_lang == "fa":
+        st.markdown(
+            f"""
+            <div class="guide-rtl-wrapper">
+                {ARCHITECTURE_FA}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(ARCHITECTURE_EN, unsafe_allow_html=True)
 
 
 # -----------------------------------------------------------------------------
