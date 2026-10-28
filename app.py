@@ -4,10 +4,11 @@ DiabPredict - Intelligent Diabetes Risk Predictor
 Senior Machine Learning Engineer & Streamlit Implementation
 Dataset: Pima Indians Diabetes Database
 Model: Random Forest Classifier (Optimized & Cached)
-Features: Full Bilingual Support (Persian / English), RTL Typography,
+Features: Full Bilingual Support (Persian / English), Precision RTL Typography,
           Interactive Prediction Engine, Clinical Analytics, and Comprehensive User Guide.
 """
 
+import os
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -30,12 +31,12 @@ st.set_page_config(
 
 # Initialize Session State
 if "language" not in st.session_state:
-    st.session_state["language"] = "fa"  # Persian default per user specification
+    st.session_state["language"] = "fa"
 
 if "has_predicted" not in st.session_state:
     st.session_state["has_predicted"] = False
 
-# Parameter slider states
+# Parameter slider defaults
 if "sl_preg" not in st.session_state:
     st.session_state["sl_preg"] = 1
 if "sl_gluc" not in st.session_state:
@@ -56,11 +57,12 @@ if "sl_age" not in st.session_state:
 # -----------------------------------------------------------------------------
 # 1. LANGUAGE SELECTOR (TOP OF SIDEBAR)
 # -----------------------------------------------------------------------------
-lang_options = ["🇮🇷 فارسی (Persian)", "🇬🇧 English"]
+# Clean labels without emoji flag combos that render as 'GB' / 'IR' on Windows
+lang_options = ["فارسی (Persian)", "English"]
 current_index = 0 if st.session_state["language"] == "fa" else 1
 
 selected_lang_str = st.sidebar.selectbox(
-    "🌐 تغییر زبان / Change Language",
+    "🌐 تغییر زبان / Select Language",
     options=lang_options,
     index=current_index,
     key="language_selector",
@@ -71,16 +73,43 @@ st.session_state["language"] = active_lang
 is_rtl = active_lang == "fa"
 
 # -----------------------------------------------------------------------------
-# 2. DYNAMIC STYLING (RTL FOR PERSIAN / LTR FOR ENGLISH)
+# 2. BULLETPROOF CSS: PRESERVING MATERIAL ICONS + PRECISION RTL TYPOGRAPHY
 # -----------------------------------------------------------------------------
 if is_rtl:
     custom_css = """
     <style>
-        /* Import Vazirmatn Persian Font */
+        /* Import Vazirmatn Font */
         @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap');
 
-        html, body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stSidebar"], 
-        .stMarkdown, p, h1, h2, h3, h4, h5, h6, span, label, input, button, select, textarea {
+        /* 1. CRITICAL: Preserve Streamlit and Material Symbols icons from font overrides */
+        [data-testid="stIconMaterial"], 
+        [data-testid="stIcon"], 
+        [data-testid="stExpanderToggleIcon"],
+        [data-testid="stToolbar"] *,
+        [data-testid="stMainMenu"] *,
+        [data-testid="baseButton-header"] *,
+        [data-testid="stSidebarCollapseButton"] *,
+        [data-testid="collapsedControl"] *,
+        .material-symbols-rounded, 
+        .material-icons,
+        [class*="material-symbols"],
+        [class*="stIcon"] {
+            font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
+            font-feature-settings: "liga" 1 !important;
+            font-variant-ligatures: normal !important;
+            letter-spacing: normal !important;
+            text-transform: none !important;
+        }
+
+        /* 2. Apply Vazirmatn to text elements only */
+        html, body, 
+        [data-testid="stAppViewContainer"], 
+        [data-testid="stMarkdownContainer"] p, 
+        [data-testid="stMarkdownContainer"] span:not([data-testid="stIconMaterial"]):not(.material-symbols-rounded):not([data-testid="stExpanderToggleIcon"]),
+        [data-testid="stWidgetLabel"] label,
+        [data-testid="stWidgetLabel"] span,
+        h1, h2, h3, h4, h5, h6, 
+        p, li, td, th {
             font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         }
 
@@ -90,6 +119,7 @@ if is_rtl:
             text-align: right !important;
         }
 
+        /* Sidebar RTL */
         [data-testid="stSidebar"] {
             direction: rtl !important;
             text-align: right !important;
@@ -99,31 +129,6 @@ if is_rtl:
 
         [data-testid="stSidebarContent"] {
             direction: rtl !important;
-            text-align: right !important;
-        }
-
-        /* RTL Lists, Quotes, Tables */
-        ul, ol {
-            padding-right: 1.5rem !important;
-            padding-left: 0 !important;
-            margin-right: 0 !important;
-        }
-        li {
-            margin-bottom: 0.4rem;
-        }
-        blockquote {
-            border-right: 4px solid #38bdf8 !important;
-            border-left: none !important;
-            padding-right: 1rem !important;
-            padding-left: 0.5rem !important;
-            background: rgba(56, 189, 248, 0.05);
-            border-radius: 6px;
-        }
-        table {
-            direction: rtl !important;
-            text-align: right !important;
-        }
-        th, td {
             text-align: right !important;
         }
 
@@ -167,41 +172,64 @@ if is_rtl:
             font-size: 1.05rem;
             color: #cbd5e1;
             margin-top: 0.8rem;
-            line-height: 1.8;
+            line-height: 1.85;
             max-width: 950px;
         }
 
-        /* RTL Metrics */
+        /* 3. Metric Cards: Fix truncation and ellipis */
         [data-testid="stMetric"] {
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid rgba(226, 232, 240, 0.12);
             border-radius: 14px;
-            padding: 16px 20px;
+            padding: 16px 18px;
             direction: rtl !important;
             text-align: right !important;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        [data-testid="stMetric"]:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px -2px rgba(0, 0, 0, 0.1);
+            min-height: 125px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         [data-testid="stMetricLabel"] {
             direction: rtl !important;
             text-align: right !important;
             justify-content: flex-start !important;
+            white-space: normal !important;
+            overflow: visible !important;
+        }
+
+        [data-testid="stMetricLabel"] p {
+            font-size: 0.88rem !important;
+            font-weight: 600 !important;
+            color: #94a3b8 !important;
+            white-space: normal !important;
         }
 
         [data-testid="stMetricValue"] {
             direction: rtl !important;
             text-align: right !important;
+            white-space: normal !important;
+            overflow: visible !important;
+        }
+
+        [data-testid="stMetricValue"] div {
+            font-size: 1.45rem !important;
+            font-weight: 800 !important;
+            color: #f8fafc !important;
+            white-space: normal !important;
+            line-height: 1.3 !important;
         }
 
         [data-testid="stMetricDelta"] {
             direction: rtl !important;
             text-align: right !important;
             justify-content: flex-start !important;
+            white-space: normal !important;
+        }
+
+        [data-testid="stMetricDelta"] div {
+            font-size: 0.78rem !important;
+            white-space: normal !important;
         }
 
         [data-testid="stMetricDelta"] svg {
@@ -209,7 +237,30 @@ if is_rtl:
             margin-right: 0px !important;
         }
 
-        /* RTL Tabs */
+        /* 4. Expander RTL & Chevron Fix */
+        [data-testid="stExpander"] {
+            direction: rtl !important;
+            text-align: right !important;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: rgba(255, 255, 255, 0.02) !important;
+        }
+
+        [data-testid="stExpander"] details summary {
+            direction: rtl !important;
+            text-align: right !important;
+            padding: 10px 14px !important;
+        }
+
+        [data-testid="stExpander"] details summary p {
+            direction: rtl !important;
+            text-align: right !important;
+            font-weight: 600 !important;
+            color: #f1f5f9 !important;
+            margin: 0 !important;
+        }
+
+        /* 5. RTL Tabs */
         [data-testid="stTabs"] {
             direction: rtl !important;
         }
@@ -217,24 +268,24 @@ if is_rtl:
         [data-testid="stTabs"] [data-baseweb="tab-list"] {
             direction: rtl !important;
             flex-direction: row !important;
-            gap: 8px;
+            gap: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         [data-testid="stTabs"] button {
             direction: rtl !important;
             font-family: 'Vazirmatn', sans-serif !important;
             font-size: 0.95rem !important;
+            padding: 10px 16px !important;
+            border-radius: 8px 8px 0 0 !important;
         }
 
-        /* Alerts in RTL */
+        [data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+            background-color: #38bdf8 !important;
+        }
+
+        /* 6. Alerts in RTL */
         [data-testid="stAlert"] {
-            direction: rtl !important;
-            text-align: right !important;
-            border-radius: 12px;
-        }
-
-        /* Expanders in RTL */
-        [data-testid="stExpander"] {
             direction: rtl !important;
             text-align: right !important;
             border-radius: 12px;
@@ -276,17 +327,90 @@ if is_rtl:
             direction: rtl;
         }
 
-        /* Table & DataFrame RTL */
-        [data-testid="stDataFrame"] {
-            direction: rtl !important;
-        }
-
         .sidebar-header {
             padding: 8px 0 16px 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             margin-bottom: 14px;
             text-align: right;
             direction: rtl;
+        }
+
+        /* 7. Comprehensive Guide RTL Wrapper */
+        .guide-rtl-wrapper {
+            direction: rtl !important;
+            text-align: right !important;
+            font-family: 'Vazirmatn', sans-serif !important;
+            line-height: 2 !important;
+        }
+        .guide-rtl-wrapper * {
+            direction: rtl !important;
+            text-align: right !important;
+        }
+        .guide-rtl-wrapper h1, .guide-rtl-wrapper h2, .guide-rtl-wrapper h3, .guide-rtl-wrapper h4 {
+            direction: rtl !important;
+            text-align: right !important;
+            color: #f8fafc !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 8px;
+            margin-top: 26px;
+        }
+        .guide-rtl-wrapper p, .guide-rtl-wrapper span {
+            direction: rtl !important;
+            text-align: right !important;
+            color: #cbd5e1 !important;
+            font-size: 0.98rem !important;
+            line-height: 1.95 !important;
+        }
+        .guide-rtl-wrapper ul, .guide-rtl-wrapper ol {
+            direction: rtl !important;
+            text-align: right !important;
+            padding-right: 2rem !important;
+            padding-left: 0 !important;
+            margin: 12px 0 !important;
+        }
+        .guide-rtl-wrapper li {
+            direction: rtl !important;
+            text-align: right !important;
+            margin-bottom: 8px !important;
+            color: #cbd5e1 !important;
+        }
+        .guide-rtl-wrapper table {
+            width: 100% !important;
+            direction: rtl !important;
+            text-align: right !important;
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            border-radius: 12px !important;
+            overflow: hidden !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+            margin: 20px 0 !important;
+            background: rgba(15, 23, 42, 0.6) !important;
+        }
+        .guide-rtl-wrapper th {
+            background: rgba(14, 165, 233, 0.2) !important;
+            color: #38bdf8 !important;
+            padding: 12px 16px !important;
+            font-weight: 700 !important;
+            direction: rtl !important;
+            text-align: right !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+        }
+        .guide-rtl-wrapper td {
+            padding: 12px 16px !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+            direction: rtl !important;
+            text-align: right !important;
+            color: #e2e8f0 !important;
+        }
+        .guide-rtl-wrapper blockquote {
+            border-right: 4px solid #38bdf8 !important;
+            border-left: none !important;
+            padding: 14px 18px !important;
+            background: rgba(14, 165, 233, 0.08) !important;
+            border-radius: 10px !important;
+            direction: rtl !important;
+            text-align: right !important;
+            margin: 20px 0 !important;
         }
     </style>
     """
@@ -296,8 +420,35 @@ else:
         /* Import Google Font for English */
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
-        html, body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stSidebar"], 
-        .stMarkdown, p, h1, h2, h3, h4, h5, h6, span, label, input, button {
+        /* 1. CRITICAL: Preserve Streamlit and Material Symbols icons from font overrides */
+        [data-testid="stIconMaterial"], 
+        [data-testid="stIcon"], 
+        [data-testid="stExpanderToggleIcon"],
+        [data-testid="stToolbar"] *,
+        [data-testid="stMainMenu"] *,
+        [data-testid="baseButton-header"] *,
+        [data-testid="stSidebarCollapseButton"] *,
+        [data-testid="collapsedControl"] *,
+        .material-symbols-rounded, 
+        .material-icons,
+        [class*="material-symbols"],
+        [class*="stIcon"] {
+            font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
+            font-feature-settings: "liga" 1 !important;
+            font-variant-ligatures: normal !important;
+            letter-spacing: normal !important;
+            text-transform: none !important;
+        }
+
+        /* 2. Apply font to text elements only */
+        html, body, 
+        [data-testid="stAppViewContainer"], 
+        [data-testid="stMarkdownContainer"] p, 
+        [data-testid="stMarkdownContainer"] span:not([data-testid="stIconMaterial"]):not(.material-symbols-rounded):not([data-testid="stExpanderToggleIcon"]),
+        [data-testid="stWidgetLabel"] label,
+        [data-testid="stWidgetLabel"] span,
+        h1, h2, h3, h4, h5, h6, 
+        p, li, td, th {
             font-family: 'Plus Jakarta Sans', sans-serif !important;
         }
 
@@ -311,7 +462,6 @@ else:
             text-align: left !important;
             background-color: #0b1120;
             border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-            border-left: none !important;
         }
 
         .hero-container {
@@ -362,14 +512,36 @@ else:
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid rgba(226, 232, 240, 0.12);
             border-radius: 14px;
-            padding: 16px 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            padding: 16px 18px;
+            min-height: 125px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
-        [data-testid="stMetric"]:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px -2px rgba(0, 0, 0, 0.1);
+        [data-testid="stMetricLabel"] p {
+            font-size: 0.88rem !important;
+            font-weight: 600 !important;
+            color: #94a3b8 !important;
+            white-space: normal !important;
+        }
+
+        [data-testid="stMetricValue"] div {
+            font-size: 1.45rem !important;
+            font-weight: 800 !important;
+            color: #f8fafc !important;
+            white-space: normal !important;
+        }
+
+        [data-testid="stMetricDelta"] div {
+            font-size: 0.78rem !important;
+            white-space: normal !important;
+        }
+
+        [data-testid="stExpander"] {
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: rgba(255, 255, 255, 0.02) !important;
         }
 
         div.stButton > button[kind="primary"] {
@@ -377,7 +549,6 @@ else:
             border: 1px solid #38bdf8 !important;
             font-weight: 700 !important;
             font-size: 1.05rem !important;
-            letter-spacing: 0.02em !important;
             border-radius: 12px !important;
             padding: 0.65rem 1.2rem !important;
             transition: all 0.25s ease !important;
@@ -414,8 +585,6 @@ st.markdown(custom_css, unsafe_allow_html=True)
 # -----------------------------------------------------------------------------
 # 3. DATA HANDLING & CACHING
 # -----------------------------------------------------------------------------
-import os
-
 LOCAL_DATA_PATH = "diabetes.csv"
 DATA_URL = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv"
 COLUMN_NAMES = [
@@ -670,7 +839,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Summary Key Metrics Row
+# Summary Key Metrics Row (With wrapped labels and no ellipses truncation)
 col_m1, col_m2, col_m3, col_m4 = st.columns(4)
 
 with col_m1:
@@ -727,7 +896,7 @@ if main_predict or sidebar_predict:
     st.session_state.has_predicted = True
 
 # -----------------------------------------------------------------------------
-# 7. MAIN TABS (INCLUDING COMPREHENSIVE USER GUIDE & TUTORIAL)
+# 7. MAIN TABS
 # -----------------------------------------------------------------------------
 tab_labels = [
     t("tab_prediction", active_lang),
@@ -860,136 +1029,88 @@ with tab_prediction:
     else:
         st.info(t("welcome_info", active_lang), icon="ℹ️")
 
+
 # -----------------------------------------------------------------------------
-# TAB 2: PATIENT CLINICAL OVERVIEW
+# TAB 2: PATIENT CLINICAL OVERVIEW (100% RTL NATIVE TABLE)
 # -----------------------------------------------------------------------------
 with tab_patient:
     st.subheader(t("patient_tab_header", active_lang))
 
     if active_lang == "fa":
         reference_data = [
-            {
-                t("col_param", active_lang): "تعداد بارداری‌ها (Pregnancies)",
-                t("col_val", active_lang): pregnancies,
-                t("col_ref", active_lang): "۰ تا ۴",
-                t("col_unit", active_lang): "تعداد",
-                t("col_status", active_lang): "نرمال" if pregnancies <= 4 else "بیشتر از میانگین",
-            },
-            {
-                t("col_param", active_lang): "گلوکز پلاسما (Glucose)",
-                t("col_val", active_lang): glucose,
-                t("col_ref", active_lang): "۷۰ تا ۱۴۰",
-                t("col_unit", active_lang): "mg/dL",
-                t("col_status", active_lang): "نرمال" if glucose < 140 else "بالا (اختلال تحمل گلوکز)",
-            },
-            {
-                t("col_param", active_lang): "فشار خون دیاستولیک (Blood Pressure)",
-                t("col_val", active_lang): blood_pressure,
-                t("col_ref", active_lang): "۶۰ تا ۸۰",
-                t("col_unit", active_lang): "mm Hg",
-                t("col_status", active_lang): "نرمال" if blood_pressure <= 80 else "پیش‌فشارخون / بالا",
-            },
-            {
-                t("col_param", active_lang): "ضخامت چین پوستی (Skin Thickness)",
-                t("col_val", active_lang): skin_thickness,
-                t("col_ref", active_lang): "۱۰ تا ۳۰",
-                t("col_unit", active_lang): "mm",
-                t("col_status", active_lang): "نرمال" if skin_thickness <= 30 else "بالاتر از حد متوسط",
-            },
-            {
-                t("col_param", active_lang): "انسولین سرم ۲ ساعته (Insulin)",
-                t("col_val", active_lang): insulin,
-                t("col_ref", active_lang): "۱۶ تا ۱۶۶",
-                t("col_unit", active_lang): "μU/mL",
-                t("col_status", active_lang): "نرمال" if insulin <= 166 else "بالا (مقاومت به انسولین)",
-            },
-            {
-                t("col_param", active_lang): "شاخص توده بدنی (BMI)",
-                t("col_val", active_lang): bmi,
-                t("col_ref", active_lang): "۱۸.۵ تا ۲۴.۹",
-                t("col_unit", active_lang): "kg/m²",
-                t("col_status", active_lang): "نرمال" if bmi < 25 else ("اضافه‌وزن" if bmi < 30 else "چاقی (ریسک بالا)"),
-            },
-            {
-                t("col_param", active_lang): "تابع شجره‌نامه دیابت (DPF)",
-                t("col_val", active_lang): diabetes_pedigree,
-                t("col_ref", active_lang): "کمتر از ۰.۵۰",
-                t("col_unit", active_lang): "شاخص",
-                t("col_status", active_lang): "ریسک وراثتی پایین" if diabetes_pedigree < 0.5 else "سابقه خانوادگی بالا",
-            },
-            {
-                t("col_param", active_lang): "سن بیمار (Age)",
-                t("col_val", active_lang): age,
-                t("col_ref", active_lang): "۲۱ تا ۴۵",
-                t("col_unit", active_lang): "سال",
-                t("col_status", active_lang): "بازه استاندارد" if age < 45 else "رده سنی نیازمند پایش (≥۴۵)",
-            },
+            ("تعداد بارداری‌ها (Pregnancies)", str(pregnancies), "۰ تا ۴", "تعداد", "نرمال" if pregnancies <= 4 else "بیشتر از میانگین", "normal" if pregnancies <= 4 else "warning"),
+            ("گلوکز پلاسما (Glucose)", f"{glucose}", "۷۰ تا ۱۴۰", "mg/dL", "نرمال" if glucose < 140 else "بالا (اختلال تحمل)", "normal" if glucose < 140 else "critical"),
+            ("فشار خون دیاستولیک (Blood Pressure)", f"{blood_pressure}", "۶۰ تا ۸۰", "mm Hg", "نرمال" if blood_pressure <= 80 else "پیش‌فشارخون / بالا", "normal" if blood_pressure <= 80 else "warning"),
+            ("ضخامت چین پوستی (Skin Thickness)", f"{skin_thickness}", "۱۰ تا ۳۰", "mm", "نرمال" if skin_thickness <= 30 else "بالاتر از حد متوسط", "normal" if skin_thickness <= 30 else "warning"),
+            ("انسولین سرم ۲ ساعته (Insulin)", f"{insulin}", "۱۶ تا ۱۶۶", "μU/mL", "نرمال" if insulin <= 166 else "بالا (مقاومت انسولین)", "normal" if insulin <= 166 else "critical"),
+            ("شاخص توده بدنی (BMI)", f"{bmi:.1f}", "۱۸.۵ تا ۲۴.۹", "kg/m²", "نرمال" if bmi < 25 else ("اضافه‌وزن" if bmi < 30 else "چاقی (ریسک بالا)"), "normal" if bmi < 25 else ("warning" if bmi < 30 else "critical")),
+            ("تابع شجره‌نامه دیابت (DPF)", f"{diabetes_pedigree:.2f}", "کمتر از ۰.۵۰", "شاخص", "ریسک وراثتی پایین" if diabetes_pedigree < 0.5 else "سابقه خانوادگی بالا", "normal" if diabetes_pedigree < 0.5 else "warning"),
+            ("سن بیمار (Age)", f"{age}", "۲۱ تا ۴۵", "سال", "بازه استاندارد" if age < 45 else "رده سنی نیازمند پایش (≥۴۵)", "normal" if age < 45 else "warning"),
         ]
+        headers = ["شاخص بالینی", "مقدار کنونی بیمار", "محدوده نرمال مرجع", "واحد سنجش", "وضعیت بالینی"]
     else:
         reference_data = [
-            {
-                t("col_param", active_lang): "Pregnancies",
-                t("col_val", active_lang): pregnancies,
-                t("col_ref", active_lang): "0 - 4",
-                t("col_unit", active_lang): "count",
-                t("col_status", active_lang): "Normal" if pregnancies <= 4 else "Elevated",
-            },
-            {
-                t("col_param", active_lang): "Glucose",
-                t("col_val", active_lang): glucose,
-                t("col_ref", active_lang): "70 - 140",
-                t("col_unit", active_lang): "mg/dL",
-                t("col_status", active_lang): "Normal" if glucose < 140 else "High (Impaired)",
-            },
-            {
-                t("col_param", active_lang): "Blood Pressure",
-                t("col_val", active_lang): blood_pressure,
-                t("col_ref", active_lang): "60 - 80",
-                t("col_unit", active_lang): "mm Hg",
-                t("col_status", active_lang): "Normal" if blood_pressure <= 80 else "Pre-hypertension",
-            },
-            {
-                t("col_param", active_lang): "Skin Thickness",
-                t("col_val", active_lang): skin_thickness,
-                t("col_ref", active_lang): "10 - 30",
-                t("col_unit", active_lang): "mm",
-                t("col_status", active_lang): "Normal" if skin_thickness <= 30 else "Above Average",
-            },
-            {
-                t("col_param", active_lang): "Insulin",
-                t("col_val", active_lang): insulin,
-                t("col_ref", active_lang): "16 - 166",
-                t("col_unit", active_lang): "μU/mL",
-                t("col_status", active_lang): "Normal" if insulin <= 166 else "High",
-            },
-            {
-                t("col_param", active_lang): "BMI",
-                t("col_val", active_lang): bmi,
-                t("col_ref", active_lang): "18.5 - 24.9",
-                t("col_unit", active_lang): "kg/m²",
-                t("col_status", active_lang): "Normal" if bmi < 25 else ("Overweight" if bmi < 30 else "Obese"),
-            },
-            {
-                t("col_param", active_lang): "Diabetes Pedigree",
-                t("col_val", active_lang): diabetes_pedigree,
-                t("col_ref", active_lang): "< 0.50",
-                t("col_unit", active_lang): "index",
-                t("col_status", active_lang): "Low Hereditary Risk" if diabetes_pedigree < 0.5 else "Elevated Family Risk",
-            },
-            {
-                t("col_param", active_lang): "Age",
-                t("col_val", active_lang): age,
-                t("col_ref", active_lang): "21 - 45",
-                t("col_unit", active_lang): "years",
-                t("col_status", active_lang): "Standard Range" if age < 45 else "Elevated Age Tier",
-            },
+            ("Pregnancies", str(pregnancies), "0 - 4", "count", "Normal" if pregnancies <= 4 else "Elevated", "normal" if pregnancies <= 4 else "warning"),
+            ("Glucose", f"{glucose}", "70 - 140", "mg/dL", "Normal" if glucose < 140 else "High (Impaired)", "normal" if glucose < 140 else "critical"),
+            ("Blood Pressure", f"{blood_pressure}", "60 - 80", "mm Hg", "Normal" if blood_pressure <= 80 else "Pre-hypertension", "normal" if blood_pressure <= 80 else "warning"),
+            ("Skin Thickness", f"{skin_thickness}", "10 - 30", "mm", "Normal" if skin_thickness <= 30 else "Above Average", "normal" if skin_thickness <= 30 else "warning"),
+            ("Insulin", f"{insulin}", "16 - 166", "μU/mL", "Normal" if insulin <= 166 else "High", "normal" if insulin <= 166 else "critical"),
+            ("BMI", f"{bmi:.1f}", "18.5 - 24.9", "kg/m²", "Normal" if bmi < 25 else ("Overweight" if bmi < 30 else "Obese"), "normal" if bmi < 25 else ("warning" if bmi < 30 else "critical")),
+            ("Diabetes Pedigree", f"{diabetes_pedigree:.2f}", "< 0.50", "index", "Low Hereditary Risk" if diabetes_pedigree < 0.5 else "Elevated Family Risk", "normal" if diabetes_pedigree < 0.5 else "warning"),
+            ("Age", f"{age}", "21 - 45", "years", "Standard Range" if age < 45 else "Elevated Age Tier", "normal" if age < 45 else "warning"),
         ]
+        headers = ["Clinical Parameter", "Current Value", "Normal Reference", "Unit", "Clinical Status"]
 
-    ref_df = pd.DataFrame(reference_data)
-    st.dataframe(ref_df, use_container_width=True, hide_index=True)
+    # Generate precision HTML table with 100% RTL support and badges
+    align_dir = "rtl" if is_rtl else "ltr"
+    align_text = "right" if is_rtl else "left"
+
+    table_rows_html = ""
+    for param, val, ref, unit, status, badge_tier in reference_data:
+        if badge_tier == "normal":
+            badge_style = "background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.35);"
+        elif badge_tier == "warning":
+            badge_style = "background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.35);"
+        else:
+            badge_style = "background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.35);"
+
+        table_rows_html += f"""
+        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.07); transition: background 0.2s;">
+            <td style="padding: 14px 16px; font-weight: 600; color: #f8fafc; text-align: {align_text};">{param}</td>
+            <td style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{val}</td>
+            <td style="padding: 14px 16px; color: #94a3b8; text-align: {align_text};">{ref}</td>
+            <td style="padding: 14px 16px; color: #64748b; text-align: {align_text};">{unit}</td>
+            <td style="padding: 14px 16px; text-align: {align_text};">
+                <span style="display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; {badge_style}">
+                    {status}
+                </span>
+            </td>
+        </tr>
+        """
+
+    custom_table_html = f"""
+    <div style="direction: {align_dir}; text-align: {align_text}; overflow-x: auto; margin-top: 1.2rem; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(15, 23, 42, 0.45); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.92rem; direction: {align_dir}; text-align: {align_text};">
+            <thead>
+                <tr style="background: rgba(14, 165, 233, 0.12); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                    <th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[0]}</th>
+                    <th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[1]}</th>
+                    <th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[2]}</th>
+                    <th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[3]}</th>
+                    <th style="padding: 14px 16px; font-weight: 700; color: #38bdf8; text-align: {align_text};">{headers[4]}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {table_rows_html}
+            </tbody>
+        </table>
+    </div>
+    """
+    st.markdown(custom_table_html, unsafe_allow_html=True)
+
 
 # -----------------------------------------------------------------------------
-# TAB 3: MODEL INTELLIGENCE & ANALYTICS
+# TAB 3: MODEL INTELLIGENCE & ANALYTICS (100% RTL BARS & CONFUSION MATRIX)
 # -----------------------------------------------------------------------------
 with tab_analytics:
     st.subheader(t("analytics_tab_header", active_lang))
@@ -1003,10 +1124,10 @@ with tab_analytics:
         feature_map_fa = {
             'Glucose': 'گلوکز (Glucose)',
             'BMI': 'شاخص توده بدنی (BMI)',
-            'Age': 'سن (Age)',
+            'Age': 'سن بیمار (Age)',
             'DiabetesPedigreeFunction': 'شجره‌نامه ژنتیکی (DPF)',
-            'BloodPressure': 'فشار خون (BP)',
-            'Insulin': 'انسولین (Insulin)',
+            'BloodPressure': 'فشار خون دیاستولیک (BP)',
+            'Insulin': 'انسولین سرم (Insulin)',
             'SkinThickness': 'ضخامت پوست (Skin)',
             'Pregnancies': 'تعداد بارداری‌ها (Preg)',
         }
@@ -1017,51 +1138,204 @@ with tab_analytics:
     col_chart, col_matrix = st.columns([3, 2])
 
     with col_chart:
-        chart_data = fi_df.set_index(t('feature_col', active_lang))[t('weight_col', active_lang)]
-        st.bar_chart(
-            data=chart_data,
-            horizontal=True,
-            use_container_width=True,
-        )
+        # High fidelity RTL progress bars
+        max_w = float(fi_df[t('weight_col', active_lang)].max()) if len(fi_df) > 0 else 1.0
+        bar_rows_html = ""
+
+        for _, r in fi_df.iterrows():
+            fname = r[t('feature_col', active_lang)]
+            wval = float(r[t('weight_col', active_lang)])
+            pct_bar = (wval / max_w) * 100
+
+            if is_rtl:
+                bar_rows_html += f"""
+                <div style="margin-bottom: 14px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px; direction: rtl;">
+                        <span style="font-weight: 600; color: #f1f5f9;">{fname}</span>
+                        <span style="color: #38bdf8; font-weight: 700; direction: ltr;">{wval:.2f}%</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.06); border-radius: 8px; height: 10px; width: 100%; overflow: hidden; direction: rtl;">
+                        <div style="background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%); height: 100%; width: {pct_bar}%; border-radius: 8px;"></div>
+                    </div>
+                </div>
+                """
+            else:
+                bar_rows_html += f"""
+                <div style="margin-bottom: 14px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px; direction: ltr;">
+                        <span style="font-weight: 600; color: #f1f5f9;">{fname}</span>
+                        <span style="color: #38bdf8; font-weight: 700;">{wval:.2f}%</span>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.06); border-radius: 8px; height: 10px; width: 100%; overflow: hidden; direction: ltr;">
+                        <div style="background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%); height: 100%; width: {pct_bar}%; border-radius: 8px;"></div>
+                    </div>
+                </div>
+                """
+
+        card_title = "اهمیت نسبی بیومارکرها در مدل" if is_rtl else "Relative Biomarker Importance"
+        custom_chart_html = f"""
+        <div style="direction: {'rtl' if is_rtl else 'ltr'}; padding: 18px 20px; border-radius: 14px; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(255, 255, 255, 0.1);">
+            <div style="font-weight: 700; font-size: 1rem; color: #f8fafc; margin-bottom: 14px;">📊 {card_title}</div>
+            {bar_rows_html}
+        </div>
+        """
+        st.markdown(custom_chart_html, unsafe_allow_html=True)
 
     with col_matrix:
-        st.markdown(f"##### {t('cm_header', active_lang)}")
         cm = meta['confusion_matrix']
-        cm_df = pd.DataFrame(
-            cm,
-            columns=[t('cm_pred_neg', active_lang), t('cm_pred_pos', active_lang)],
-            index=[t('cm_act_neg', active_lang), t('cm_act_pos', active_lang)],
-        )
-        st.dataframe(cm_df, use_container_width=True)
-        st.caption(
-            t(
-                "cm_caption",
-                active_lang,
-                test_count=meta['test_samples'],
-                acc=baseline_acc_pct,
-            )
-        )
+        tn, fp = int(cm[0][0]), int(cm[0][1])
+        fn, tp = int(cm[1][0]), int(cm[1][1])
+        total_cm = tn + fp + fn + tp
+
+        if is_rtl:
+            cm_title = "🧪 ماتریس درهم‌ریختگی (Confusion Matrix)"
+            cm_sub = "مقایسه پیش‌بینی‌های مدل با نتایج واقعی در داده‌های آزمون"
+            lbl_tn = "پیش‌بینی صحیح سالم (TN)"
+            lbl_tp = "پیش‌بینی صحیح دیابت (TP)"
+            lbl_fp = "خطای مثبت کاذب (FP)"
+            lbl_fn = "خطای منفی کاذب (FN)"
+            total_lbl = "از کل نمونه‌های تست"
+        else:
+            cm_title = "🧪 Test Set Confusion Matrix"
+            cm_sub = "Model predictions vs. actual ground truth on test cohort"
+            lbl_tn = "True Negative (Healthy)"
+            lbl_tp = "True Positive (Diabetic)"
+            lbl_fp = "False Positive (Type I Error)"
+            lbl_fn = "False Negative (Type II Error)"
+            total_lbl = "of test split"
+
+        custom_cm_html = f"""
+        <div style="direction: {'rtl' if is_rtl else 'ltr'}; padding: 18px 20px; border-radius: 14px; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(255, 255, 255, 0.1);">
+            <div style="font-weight: 700; font-size: 1rem; color: #f8fafc; margin-bottom: 4px;">{cm_title}</div>
+            <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 16px;">{cm_sub}</div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 14px 10px; text-align: center;">
+                    <div style="font-size: 0.76rem; color: #10b981; font-weight: 600;">{lbl_tn}</div>
+                    <div style="font-size: 1.65rem; font-weight: 800; color: #ffffff; margin: 4px 0;">{tn}</div>
+                    <div style="font-size: 0.74rem; color: #94a3b8;">{(tn/total_cm*100):.1f}% {total_lbl}</div>
+                </div>
+                <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 10px; padding: 14px 10px; text-align: center;">
+                    <div style="font-size: 0.76rem; color: #f87171; font-weight: 600;">{lbl_fp}</div>
+                    <div style="font-size: 1.65rem; font-weight: 800; color: #ffffff; margin: 4px 0;">{fp}</div>
+                    <div style="font-size: 0.74rem; color: #94a3b8;">{(fp/total_cm*100):.1f}% {total_lbl}</div>
+                </div>
+                <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px; padding: 14px 10px; text-align: center;">
+                    <div style="font-size: 0.76rem; color: #fbbf24; font-weight: 600;">{lbl_fn}</div>
+                    <div style="font-size: 1.65rem; font-weight: 800; color: #ffffff; margin: 4px 0;">{fn}</div>
+                    <div style="font-size: 0.74rem; color: #94a3b8;">{(fn/total_cm*100):.1f}% {total_lbl}</div>
+                </div>
+                <div style="background: rgba(14, 165, 233, 0.12); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 10px; padding: 14px 10px; text-align: center;">
+                    <div style="font-size: 0.76rem; color: #38bdf8; font-weight: 600;">{lbl_tp}</div>
+                    <div style="font-size: 1.65rem; font-weight: 800; color: #ffffff; margin: 4px 0;">{tp}</div>
+                    <div style="font-size: 0.74rem; color: #94a3b8;">{(tp/total_cm*100):.1f}% {total_lbl}</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 14px; font-size: 0.8rem; color: #94a3b8; text-align: center; direction: {'rtl' if is_rtl else 'ltr'};">
+                {t("cm_caption", active_lang, test_count=meta['test_samples'], acc=baseline_acc_pct)}
+            </div>
+        </div>
+        """
+        st.markdown(custom_cm_html, unsafe_allow_html=True)
+
 
 # -----------------------------------------------------------------------------
-# TAB 4: DATASET EXPLORER
+# TAB 4: DATASET EXPLORER (100% RTL STATISTICS & METRICS)
 # -----------------------------------------------------------------------------
 with tab_data:
     st.subheader(t("data_tab_header", active_lang))
     st.caption(t("data_tab_caption", active_lang))
 
+    # Cohort Breakdown Cards in Persian/English
+    d_c1, d_c2, d_c3, d_c4 = st.columns(4)
+    total_recs = len(data)
+    pos_recs = int((data['Outcome'] == 1).sum())
+    neg_recs = int((data['Outcome'] == 0).sum())
+
+    with d_c1:
+        st.metric(
+            label="تعداد کل رکوردهای بیماران" if is_rtl else "Total Patient Records",
+            value=f"{total_recs:,}",
+            delta="۱۰۰٪ جامعه نمونه" if is_rtl else "100% Dataset Cohort",
+        )
+    with d_c2:
+        st.metric(
+            label="شاخص‌های بالینی (ویژگی‌ها)" if is_rtl else "Biomarker Features",
+            value="۸ متغیر ورودی" if is_rtl else "8 Input Features",
+            delta="+ ۱ ستون برچسب" if is_rtl else "+ 1 Outcome Label",
+        )
+    with d_c3:
+        st.metric(
+            label="پرونده‌های دارای دیابت (مثبت)" if is_rtl else "Diabetic Cases (Positive)",
+            value=f"{pos_recs}",
+            delta=f"{(pos_recs/total_recs*100):.1f}٪ شیوع در جامعه" if is_rtl else f"{(pos_recs/total_recs*100):.1f}% Prevalence",
+            delta_color="inverse",
+        )
+    with d_c4:
+        st.metric(
+            label="پرونده‌های بدون دیابت (سالم)" if is_rtl else "Healthy Controls (Negative)",
+            value=f"{neg_recs}",
+            delta=f"{(neg_recs/total_recs*100):.1f}٪ از کل داده‌ها" if is_rtl else f"{(neg_recs/total_recs*100):.1f}% Cohort Ratio",
+        )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(f"**{'نمونه داده‌های ثبت‌شده در پایگاه پیما (۱۵ سطر اول):' if is_rtl else 'Raw Sample Records (First 15 Rows):'}**")
     st.dataframe(data.head(15), use_container_width=True)
 
-    with st.expander(t("data_summary_expander", active_lang)):
+    # Column explanations in Persian/English expander
+    expander_label = "📖 راهنمای متغیرها و نام ستون‌های داده" if is_rtl else "📖 Dataset Columns Glossary"
+    with st.expander(expander_label, expanded=False):
+        if is_rtl:
+            glossary_html = """
+            <div style="direction: rtl; text-align: right; line-height: 1.8; font-size: 0.92rem; color: #cbd5e1;">
+                • <b>Pregnancies:</b> تعداد دفعات بارداری بیمار.<br>
+                • <b>Glucose:</b> غلظت گلوکز پلاسما در دقیقه ۱۲۰ آزمون تحمل گلوکز خوراکی (mg/dL).<br>
+                • <b>BloodPressure:</b> فشار خون دیاستولیک بر حسب میلی‌متر جیوه (mm Hg).<br>
+                • <b>SkinThickness:</b> ضخامت چین پوستی عضله سه‌سر بازو بر حسب میلی‌متر (mm).<br>
+                • <b>Insulin:</b> سطح سرمی انسولین ۲ ساعت پس از مصرف گلوکز (μU/mL).<br>
+                • <b>BMI:</b> شاخص توده بدنی (کیلوگرم بر توان دوم قد بر حسب متر).<br>
+                • <b>DiabetesPedigreeFunction:</b> تابع ریاضی محاسبه سابقه ژنتیکی و خویشاوندی دیابت.<br>
+                • <b>Age:</b> سن شناسنامه‌ای بیمار به سال.<br>
+                • <b>Outcome:</b> تشخیص بالینی نهایی (۰ = سالم / منفی، ۱ = مبتلا به دیابت / مثبت).
+            </div>
+            """
+        else:
+            glossary_html = """
+            <div style="direction: ltr; text-align: left; line-height: 1.8; font-size: 0.92rem; color: #cbd5e1;">
+                • <b>Pregnancies:</b> Number of times pregnant.<br>
+                • <b>Glucose:</b> Plasma glucose concentration at 2 hours in an oral glucose tolerance test (mg/dL).<br>
+                • <b>BloodPressure:</b> Diastolic blood pressure (mm Hg).<br>
+                • <b>SkinThickness:</b> Triceps skin fold thickness (mm).<br>
+                • <b>Insulin:</b> 2-Hour serum insulin level (μU/mL).<br>
+                • <b>BMI:</b> Body mass index (weight in kg / (height in m)^2).<br>
+                • <b>DiabetesPedigreeFunction:</b> Genetic scoring synthesizing family history of diabetes.<br>
+                • <b>Age:</b> Patient chronological age in years.<br>
+                • <b>Outcome:</b> Class variable (0 = Negative / Healthy, 1 = Positive / Diabetic).
+            </div>
+            """
+        st.markdown(glossary_html, unsafe_allow_html=True)
+
+    with st.expander(t("data_summary_expander", active_lang), expanded=False):
         st.dataframe(data.describe().round(2), use_container_width=True)
 
+
 # -----------------------------------------------------------------------------
-# TAB 5: COMPREHENSIVE USER GUIDE & TUTORIAL (صفحه راهنما و آموزش جامع)
+# TAB 5: COMPREHENSIVE USER GUIDE & TUTORIAL (100% RTL CONTAINER)
 # -----------------------------------------------------------------------------
 with tab_guide:
     if active_lang == "fa":
-        st.markdown(GUIDE_FA, unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div class="guide-rtl-wrapper">
+                {GUIDE_FA}
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     else:
         st.markdown(GUIDE_EN, unsafe_allow_html=True)
+
 
 # -----------------------------------------------------------------------------
 # FOOTER & MEDICAL DISCLAIMER
@@ -1069,7 +1343,7 @@ with tab_guide:
 st.markdown("---")
 st.markdown(
     f"""
-    <div style="font-size: 0.82rem; color: #64748b; line-height: 1.7; text-align: center; max-width: 1000px; margin: 0 auto;">
+    <div style="font-size: 0.82rem; color: #64748b; line-height: 1.7; text-align: center; max-width: 1000px; margin: 0 auto; direction: {'rtl' if is_rtl else 'ltr'};">
         {t("footer_disclaimer", active_lang)}
     </div>
     """,
